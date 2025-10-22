@@ -43,3 +43,7 @@ pgspl.sql
 cookies2.txt
 cookies.txt
 cookies.txt
+assign_roles.sql
+assign_tenant_to_property.sql
+cookies.txt
+tenant_cookies.txt
