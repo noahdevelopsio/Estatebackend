@@ -1,36 +1,36 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabaseServer'
 import { supabase } from '@/lib/supabaseClient'
+import { z } from 'zod'
+
+const signupSchema = z.object({
+  email: z.string().email(),
+  password: z.string().min(6),
+  full_name: z.string().min(1),
+  phone: z.string().min(10),
+  role: z.enum(['tenant', 'landlord', 'admin', 'maintenance', 'accountant']),
+})
 
 export async function POST(req: Request) {
   const supabaseAuth = await createClient()
-  const { email, password, full_name } = await req.json()
+  const body = await req.json()
+  const validated = signupSchema.safeParse(body)
+
+  if (!validated.success) {
+    return NextResponse.json({ error: validated.error.issues[0].message }, { status: 400 })
+  }
+
+  const { email, password, full_name, phone, role } = validated.data
 
   const { data, error } = await supabaseAuth.auth.signUp({
     email,
     password,
     options: {
-      data: { full_name },
+      data: { full_name, phone, role },
     },
   })
 
   if (error) return NextResponse.json({ error: error.message }, { status: 400 })
-
-  // Insert into public.Users table using service role
-  if (data.user) {
-    const { error: insertError } = await supabase
-      .from('Users')
-      .insert({
-        id: data.user.id,
-        full_name,
-        email,
-      })
-
-    if (insertError) {
-      console.error('Error inserting user into public.Users:', insertError)
-      return NextResponse.json({ error: 'Failed to save user profile' }, { status: 500 })
-    }
-  }
 
   return NextResponse.json({ success: true, user: data.user })
 }
